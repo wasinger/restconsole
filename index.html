@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>Elasticsearch Tester</title>
+    <!--<link rel="stylesheet" href="bower_components/jquery.json-view/dist/jquery.json-view.min.css">-->
+    <style type="text/css" media="screen">
+    body, html, #page {
+        height: 100%;
+        margin: 0;
+        box-sizing: border-box;
+    }
+    h1 {
+        margin-top: 0;
+    }
+        #editor, #result {
+            box-sizing: border-box;
+            width: 100%;
+            height: 65vh;
+            border: 1px solid #999;
+        }
+        #spalte1 {
+            height: 100%;
+            /*overflow-y: auto;*/
+            box-sizing: border-box;
+            width: 50%;
+            float: left;
+            position: relative;
+        }
+        #spalte2 {
+            height: 100%;
+            /*overflow-y: auto;*/
+            box-sizing: border-box;
+            width: 50%;
+            margin-left: 50%;
+            position: relative;
+        }
+        #spalte1 > div, #spalte2 > div {
+            box-sizing: border-box;
+            padding: 10px;
+        }
+        #saved_requests {
+            list-style: none;
+            overflow-y: auto;
+            height: 8vh;
+            border: 1px solid #ccc;
+        }
+
+    </style>
+</head>
+<body>
+<div id="page">
+    <div id="spalte1">
+        <div>
+        <h1>REST console</h1>
+        <h3>Request</h3>
+    <input id="url" value="http://localhost:9200/_search" style="width:70%;">
+        <select id="method">
+            <option value="POST" selected>POST</option>
+            <option value="GET">GET</option>
+            <option value="DELETE">DELETE</option>
+            <option value="PUT">PUT</option>
+        </select>
+    <button id="sendbutton">OK</button>
+<pre id="editor">{
+    "query": {
+        "match": {
+            "title": "Test"
+        }
+    }
+}</pre>
+            <form>
+                Save request body as:
+                <input id="bodytitle">
+                <button id="savebody">Save</button>
+            </form>
+            <ul id="saved_requests">
+
+            </ul>
+        </div>
+    </div>
+    <div id="spalte2">
+        <div>
+        <h1>&nbsp;</h1>
+        <h3>Response</h3>
+            <p id="status">&nbsp;</p>
+<pre id="result"></pre>
+        </div>
+    </div>
+</div>
+<script src="bower_components/jquery/dist/jquery.min.js"></script>
+<script src="bower_components/ace-builds/src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<!--<script src="bower_components/jquery.json-view/dist/jquery.json-view.min.js" type="text/javascript" charset="utf-8"></script>-->
+<script>
+    function generateUUID(){
+        var d = new Date().getTime();
+        if(window.performance && typeof window.performance.now === "function"){
+            d += performance.now(); //use high-precision timer if available
+        }
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+        });
+        return uuid;
+    }
+
+    var editor = ace.edit("editor");
+    editor.setTheme("ace/theme/github");
+    editor.session.setMode("ace/mode/json");
+
+    var result = ace.edit("result");
+    result.setTheme("ace/theme/github");
+    result.session.setMode("ace/mode/json");
+    result.setReadOnly(true);
+
+//    localStorage.setItem('savedRequests', '');
+
+    var $sr = $('#saved_requests');
+    var saved_requests = localStorage.getItem('savedRequests');
+    if (saved_requests != '') {
+        saved_requests = JSON.parse(saved_requests);
+    }
+
+    if (!(typeof saved_requests == 'object')) {
+        saved_requests = {};
+    }
+
+    // Proxy rest requests
+    $.ajaxPrefilter(function( options ) {
+        var proxy_url = window.location.toString();
+        proxy_url = proxy_url.replace(/#.*$/, '');
+        proxy_url = proxy_url.replace(/\/index.html$/, '/');
+        proxy_url = proxy_url.replace(/\/$/, '/proxy.php?url=');
+        options.url = proxy_url + encodeURIComponent( options.url );
+    });
+
+    function loadState(state) {
+        if (state && state.url) {
+            $('#url').val(state.url);
+            if (state.body) {
+                editor.setValue(state.body);
+                result.setValue('');
+            }
+            if (state.method) {
+                $('#method').val(state.method);
+                check_method();
+            }
+            $('#status').html('&nbsp;');
+        }
+    }
+
+    loadState(history.state);
+    window.onpopstate = function(event) {
+        loadState(event.state);
+    };
+
+    $(document).on('click', '#sendbutton', function() {
+        var url = $('#url').val();
+        var rb = editor.getValue().trim();
+        var method = $('#method').val();
+
+        console.log(rb);
+
+
+        var uid = generateUUID();
+//        localStorage.setItem(uid, {
+//            'url': url,
+//            'body': rb
+//        });
+        history.pushState({
+            'url': url,
+            'body': rb,
+            'method': method
+        }, '', '#' + uid);
+
+        var ajax_options = {
+            url: url,
+            type: method,
+            dataType: 'json',
+            contentType: "application/json; charset=utf-8",
+            crossDomain: true
+        };
+        if (rb != '' && !(method == 'GET' || method == 'DELETE')) {
+            ajax_options.data = rb;
+        }
+        $.ajax(ajax_options).done(function(data, textStatus, jqXHR) {
+//            $('#result').css('background-color', 'transparent').html('').jsonView(data);
+            console.log(data);
+            $('#result').css('background-color', 'transparent');
+            result.setValue(JSON.stringify(data, null, 2));
+            result.clearSelection();
+            result.scrollToLine(0);
+            $('#status').html(jqXHR.status + ' ' + jqXHR.statusText).css('color', 'green');
+        }).fail(function(jqXHR, textStatus, errorThrown){
+//            $('#result').css('background-color', '#fee').html('').jsonView(jqXHR.responseJSON);
+            console.log(textStatus);
+            result.setValue('');
+            $('#status').html(jqXHR.status + ' ' + jqXHR.statusText).css('color', 'red');
+        });
+    });
+
+    function check_method(){
+        var method = $('#method').val();
+        if (method == 'GET' || method == 'DELETE') {
+            editor.setReadOnly(true);
+            $('#editor').css('opacity', .3);
+        } else {
+            editor.setReadOnly(false);
+            $('#editor').css('opacity', 1);
+        }
+    }
+    $(document).ready(check_method);
+    $(document).on('change', '#method', check_method);
+    $(document).on('keydown', '#url, #method', function(event){
+        if(event.keyCode==13){
+            $('#sendbutton').trigger('click');
+        }
+    });
+
+
+
+    $(document).on('click', '#savebody', function() {
+        var name = $('#bodytitle').val();
+        var rb = editor.getValue().trim();
+        if (name == '') {
+            alert('Please enter a name');
+            $('#bodytitle').focus();
+            return false;
+        }
+        if (rb == '') {
+            alert('Nothing to save');
+            return false;
+        }
+        saved_requests[name] = rb;
+        localStorage.setItem('savedRequests', JSON.stringify(saved_requests));
+    });
+
+    for (var rq in saved_requests) {
+        if (saved_requests.hasOwnProperty(rq)) {
+            $sr.append('<li><a href="#" class="saved_requests" data-req="'+rq+'">' + rq + '</a></li>');
+        }
+    }
+
+    $(document).on('click', '.saved_requests', function(e){
+        e.preventDefault();
+        var rqname = $(this).data('req');
+        editor.setValue(saved_requests[rqname]);
+    })
+
+</script>
+
+</body>
+</html>
