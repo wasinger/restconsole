@@ -17,7 +17,6 @@
   ],
   "dependencies": {
     "jquery": "^2.0",
-    "ace-builds": "^1.2",
-    "jquery.json-view": "https://github.com/bazh/jquery.json-view.git"
+    "ace-builds": "^1.2"
   }
 }
