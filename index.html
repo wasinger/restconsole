@@ -128,7 +128,7 @@
     if (saved_urls != '') {
         saved_urls = JSON.parse(saved_urls);
     }
-    if (saved_urls == null || !saved_urls.isArray()) {
+    if (saved_urls == null || !Array.isArray(saved_urls)) {
         saved_urls = new Array;
     }
     console.log(saved_urls);
