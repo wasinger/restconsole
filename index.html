@@ -191,16 +191,19 @@
         if (rb != '' && !(method == 'GET' || method == 'DELETE')) {
             ajax_options.data = rb;
         }
+        var returnvalue = null;
         $.ajax(ajax_options).done(function(data, textStatus, jqXHR) {
             $('#result').css('background-color', 'transparent');
-            result.setValue(JSON.stringify(data, null, 2));
-            result.clearSelection();
-            result.scrollToLine(0);
+            returnvalue = data;
             $('#status').html(jqXHR.status + ' ' + jqXHR.statusText).css('color', 'green');
         }).fail(function(jqXHR, textStatus, errorThrown){
             console.log(textStatus);
-            result.setValue('');
+            returnvalue = jqXHR.responseJSON;
             $('#status').html(jqXHR.status + ' ' + jqXHR.statusText).css('color', 'red');
+        }).always(function() {
+            result.setValue(JSON.stringify(returnvalue, null, 2));
+            result.clearSelection();
+            result.scrollToLine(0);
         });
     });
 

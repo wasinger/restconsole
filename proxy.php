@@ -13,7 +13,11 @@ if ($content) {
     $options['body'] = $content;
 }
 
-$res = $client->request($req->getMethod(), $url, $options);
+try {
+    $res = $client->request($req->getMethod(), $url, $options);
+} catch (\GuzzleHttp\Exception\ClientException $e) {
+    $res = $e->getResponse();
+}
 
 $httpFoundationFactory = new \Symfony\Bridge\PsrHttpMessage\Factory\HttpFoundationFactory();
 $symfonyResponse = $httpFoundationFactory->createResponse($res);
