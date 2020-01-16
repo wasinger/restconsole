@@ -133,14 +133,14 @@
     }
     console.log(saved_urls);
 
-    // Proxy rest requests
-    $.ajaxPrefilter(function( options ) {
-        var proxy_url = window.location.toString();
-        proxy_url = proxy_url.replace(/#.*$/, '');
-        proxy_url = proxy_url.replace(/\/index.html$/, '/');
-        proxy_url = proxy_url.replace(/\/$/, '/proxy.php?url=');
-        options.url = proxy_url + encodeURIComponent( options.url );
-    });
+    // // Proxy rest requests
+    // $.ajaxPrefilter(function( options ) {
+    //     var proxy_url = window.location.toString();
+    //     proxy_url = proxy_url.replace(/#.*$/, '');
+    //     proxy_url = proxy_url.replace(/\/index.html$/, '/');
+    //     proxy_url = proxy_url.replace(/\/$/, '/proxy.php?url=');
+    //     options.url = proxy_url + encodeURIComponent( options.url );
+    // });
 
     function loadState(state) {
         if (state && state.url) {
