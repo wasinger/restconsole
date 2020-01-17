@@ -55,7 +55,7 @@
         <div>
         <h1>REST console</h1>
         <h3>Request</h3>
-    <input id="url" value="http://localhost:9200/_search" style="width:70%;">
+    <input id="host" value="http://localhost:9200" style="width:30%;">/<input id="path" value="_search" style="width:40%;">
         <select id="method">
             <option value="POST" selected>POST</option>
             <option value="GET">GET</option>
@@ -124,27 +124,29 @@
         saved_requests = {};
     }
 
-    var saved_urls = localStorage.getItem('savedUrls');
-    if (saved_urls != '') {
-        saved_urls = JSON.parse(saved_urls);
+    var saved_hosts = localStorage.getItem('savedHosts');
+    if (saved_hosts != '') {
+        saved_hosts = JSON.parse(saved_hosts);
     }
-    if (saved_urls == null || !Array.isArray(saved_urls)) {
-        saved_urls = new Array;
+    if (saved_hosts == null || !Array.isArray(saved_hosts)) {
+        saved_hosts = new Array;
     }
-    console.log(saved_urls);
+    console.log(saved_hosts);
 
-    // // Proxy rest requests
-    // $.ajaxPrefilter(function( options ) {
-    //     var proxy_url = window.location.toString();
-    //     proxy_url = proxy_url.replace(/#.*$/, '');
-    //     proxy_url = proxy_url.replace(/\/index.html$/, '/');
-    //     proxy_url = proxy_url.replace(/\/$/, '/proxy.php?url=');
-    //     options.url = proxy_url + encodeURIComponent( options.url );
-    // });
+
+    var saved_paths = localStorage.getItem('savedPaths');
+    if (saved_paths != '') {
+        saved_paths = JSON.parse(saved_paths);
+    }
+    if (saved_paths == null || !Array.isArray(saved_paths)) {
+        saved_paths = new Array;
+    }
+    console.log(saved_paths);
 
     function loadState(state) {
-        if (state && state.url) {
-            $('#url').val(state.url);
+        if (state && state.host) {
+            $('#host').val(state.host);
+            $('#path').val(state.path);
             if (state.body) {
                 editor.setValue(state.body);
                 result.setValue('');
@@ -163,45 +165,62 @@
     };
 
     $(document).on('click', '#sendbutton', function() {
-        var url = $('#url').val();
+        var host = $('#host').val();
+        var path = $('#path').val();
         var rb = editor.getValue().trim();
         var method = $('#method').val();
 
         var uid = generateUUID();
 
         history.pushState({
-            'url': url,
+            'host': host,
+            'path': path,
             'body': rb,
             'method': method
         }, '', '#' + uid);
 
-        if ($.inArray(url, saved_urls) == -1) {
-            saved_urls.push(url);
-            console.log(saved_urls);
-            localStorage.setItem('savedUrls', JSON.stringify(saved_urls));
+        if ($.inArray(host, saved_hosts) == -1) {
+            saved_hosts.push(host);
+            console.log(saved_hosts);
+            localStorage.setItem('savedHosts', JSON.stringify(saved_hosts));
+        }
+
+        if ($.inArray(path, saved_paths) == -1) {
+            saved_paths.push(path);
+            console.log(saved_paths);
+            localStorage.setItem('savedPaths', JSON.stringify(saved_paths));
         }
 
         var ajax_options = {
-            url: url,
+            url: host + '/' + path,
             type: method,
-            dataType: 'json',
+            // dataType: 'json',
             contentType: "application/json; charset=utf-8",
             crossDomain: true
         };
         if (rb != '' && !(method == 'GET' || method == 'DELETE')) {
             ajax_options.data = rb;
         }
-        var returnvalue = null;
+        var response_body = null;
+        var response_content_type = '';
         $.ajax(ajax_options).done(function(data, textStatus, jqXHR) {
             $('#result').css('background-color', 'transparent');
-            returnvalue = data;
+            response_body = data;
+            response_content_type = jqXHR.getResponseHeader("content-type");
             $('#status').html(jqXHR.status + ' ' + jqXHR.statusText).css('color', 'green');
         }).fail(function(jqXHR, textStatus, errorThrown){
             console.log(textStatus);
-            returnvalue = jqXHR.responseJSON;
+            response_body = jqXHR.response;
+            response_content_type = jqXHR.getResponseHeader("content-type");
             $('#status').html(jqXHR.status + ' ' + jqXHR.statusText).css('color', 'red');
         }).always(function() {
-            result.setValue(JSON.stringify(returnvalue, null, 2));
+            if (response_content_type.indexOf('json') > -1) {
+                result.session.setMode("ace/mode/json");
+                result.setValue(JSON.stringify(response_body, null, 2));
+            } else {
+                result.session.setMode("ace/mode/text");
+                result.setValue(response_body);
+            }
             result.clearSelection();
             result.scrollToLine(0);
         });
@@ -219,7 +238,7 @@
     }
     $(document).ready(check_method);
     $(document).on('change', '#method', check_method);
-    $(document).on('keydown', '#url, #method', function(event){
+    $(document).on('keydown', '#host, #path, #method', function(event){
         if(event.keyCode==13){
             $('#sendbutton').trigger('click');
         }
@@ -259,8 +278,11 @@
         editor.setValue(saved_requests[rqname]);
     })
 
-    $('#url').autocomplete({
-        source: saved_urls
+    $('#host').autocomplete({
+        source: saved_hosts
+    });
+    $('#path').autocomplete({
+        source: saved_paths
     });
 
 </script>
