@@ -1,4 +1,4 @@
 vendor
 composer.lock
-bower_components
 .idea
+node_modules
