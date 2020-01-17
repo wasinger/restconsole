@@ -216,14 +216,16 @@
             response_content_type = jqXHR.getResponseHeader("content-type");
             $('#status').html(jqXHR.status + ' ' + jqXHR.statusText).css('color', 'green');
         }).fail(function(jqXHR, textStatus, errorThrown){
-            console.log(textStatus);
-            response_body = jqXHR.response;
+            response_body = (jqXHR.responseJSON ? jqXHR.responseJSON : jqXHR.responseText);
             response_content_type = jqXHR.getResponseHeader("content-type");
             $('#status').html(jqXHR.status + ' ' + jqXHR.statusText).css('color', 'red');
         }).always(function() {
             if (response_content_type.indexOf('json') > -1) {
                 result.session.setMode("ace/mode/json");
-                result.setValue(JSON.stringify(response_body, null, 2));
+                if (typeof response_body == 'object') {
+                    response_body = JSON.stringify(response_body, null, 2);
+                }
+                result.setValue(response_body);
             } else {
                 result.session.setMode("ace/mode/text");
                 result.setValue(response_body);
